@@ -90,9 +90,9 @@ def test_integer_cents_avoid_float_rounding(monkeypatch):
 
 def test_expense_categories_sort_by_amount_then_name(monkeypatch):
     records = [
-        record('expense', 100, '餐饮', 'expense-1'),
-        record('expense', 300, '交通', 'expense-2'),
-        record('expense', 200, '购物', 'expense-3'),
+        record('expense', 300, '交通', 'expense-1'),
+        record('expense', 600, '餐饮', 'expense-2'),
+        record('expense', 100, '购物', 'expense-3'),
         record('expense', 300, '交通', 'expense-4'),
     ]
     install_filter(monkeypatch, records)
@@ -101,8 +101,8 @@ def test_expense_categories_sort_by_amount_then_name(monkeypatch):
 
     assert result['expense_by_category'] == [
         {'category': '交通', 'amount_cents': 600, 'count': 2},
-        {'category': '购物', 'amount_cents': 200, 'count': 1},
-        {'category': '餐饮', 'amount_cents': 100, 'count': 1},
+        {'category': '餐饮', 'amount_cents': 600, 'count': 1},
+        {'category': '购物', 'amount_cents': 100, 'count': 1},
     ]
 
 
@@ -173,8 +173,13 @@ def test_statistics_http_uses_one_store_snapshot_and_shared_filters(monkeypatch)
     assert calls[0][1].type == 'expense'
 
 
-@pytest.mark.parametrize('query', ['limit=1', 'offset=20', 'unknown=value'])
-def test_statistics_http_rejects_pagination_and_unknown_parameters(monkeypatch, query):
+@pytest.mark.parametrize(
+    ('query', 'field'),
+    [('limit=1', 'limit'), ('offset=20', 'offset'), ('unknown=value', 'unknown')],
+)
+def test_statistics_http_rejects_pagination_and_unknown_parameters(
+    monkeypatch, query, field
+):
     store = FakeStore([])
     install_filter(monkeypatch, [])
     app = make_app(store)
@@ -183,5 +188,5 @@ def test_statistics_http_rejects_pagination_and_unknown_parameters(monkeypatch, 
 
     assert response.status_code == 400
     assert response.json['error']['code'] == 'VALIDATION_ERROR'
-    assert response.json['error']['fields']
+    assert field in response.json['error']['fields']
     assert store.calls == 0
